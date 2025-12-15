@@ -1,0 +1,9 @@
+[project]
+name = "function-call"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "openai-agents>=0.6.3",
+]
