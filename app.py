@@ -1,16 +1,11 @@
 import streamlit as st
 from dotenv import load_dotenv
-from datetime import datetime
-from agents import Agent, Runner, function_tool
+from agents import Runner
+from my_agents import create_my_agent
 
 
 # Load local environment variables for future OpenAI agent use
 load_dotenv()
-
-@function_tool
-async def get_time() -> str:
-    """現在時刻を取得する関数"""
-    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 def decide_response(user_text: str) -> str:
     """Return a response to the user with lightweight context."""
@@ -26,13 +21,9 @@ st.caption("入力したテキストをそのまま返すシンプルなチャ�
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
-    
+
 if "agent" not in st.session_state:
-    st.session_state.agent = Agent(
-        name="Assistant",
-        model="gpt-4o-mini",
-        tools=[get_time],
-    )
+    st.session_state.agent = create_my_agent()
 
 # Display history
 for message in st.session_state.messages:
