@@ -2,6 +2,7 @@ import logging
 import streamlit as st
 from dotenv import load_dotenv
 from agents import Runner
+from openai.types.responses import ResponseTextDeltaEvent
 from my_agents import create_my_agent
 
 
@@ -14,14 +15,6 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
 )
 logging.getLogger("my_agents").setLevel(logging.INFO)
-
-def decide_response(user_text: str) -> str:
-    """Return a response to the user with lightweight context."""
-    # Build a short history string to keep minimal context across turns.
-    history = "\n".join(f"{m['role']}: {m['content']}" for m in st.session_state.messages)
-    prompt = f"{history}\nuser: {user_text}" if history else user_text
-    result = Runner.run_sync(st.session_state.agent, prompt)
-    return result.final_output
 
 st.set_page_config(page_title="Echo Chat", page_icon="💬")
 st.title("Echo Chat (準備版)")
@@ -39,14 +32,22 @@ for message in st.session_state.messages:
         st.write(message["content"])
 
 # Chat input + echo response
-if prompt := st.chat_input("メッセージを入力"):
+if user_input := st.chat_input("メッセージを入力"):
     # User message
-    st.session_state.messages.append({"role": "user", "content": prompt})
+    st.session_state.messages.append({"role": "user", "content": user_input})
     with st.chat_message("user"):
-        st.write(prompt)
+        st.write(user_input)
 
-    # Echo assistant message
-    echo_text = decide_response(prompt)
-    st.session_state.messages.append({"role": "assistant", "content": echo_text})
+    async def stream_data():
+        full_response = ""
+        history = "\n".join(f"{m['role']}: {m['content']}" for m in st.session_state.messages)
+        prompt = f"{history}\nuser: {user_input}" if history else user_input
+        result = Runner.run_streamed(st.session_state.agent, input=prompt)
+        async for event in result.stream_events():
+            if event.type == "raw_response_event" and isinstance(event.data, ResponseTextDeltaEvent):
+                full_response += event.data.delta
+                yield event.data.delta
+        st.session_state.messages.append({"role": "assistant", "content": full_response})
+
     with st.chat_message("assistant"):
-        st.write(echo_text)
+        st.write_stream(stream_data)

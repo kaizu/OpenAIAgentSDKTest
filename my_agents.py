@@ -213,7 +213,7 @@ def create_my_agent():
                 get_gene_ids,
                 get_reaction_info,
                 get_metabolite_info,
-                get_gene_info,
+                # get_gene_info,
                 get_metabolite_associated_reaction_ids,
                 get_reaction_associated_gene_ids,
                 get_gene_associated_reaction_ids,
