@@ -3,7 +3,7 @@ import streamlit as st
 from dotenv import load_dotenv
 from agents import Runner
 from openai.types.responses import ResponseTextDeltaEvent
-from my_agents import create_my_agent
+from fba_agents import create_fba_agent
 
 
 # Load local environment variables for future OpenAI agent use
@@ -14,17 +14,17 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
 )
-logging.getLogger("my_agents").setLevel(logging.INFO)
+logging.getLogger("fba_agents").setLevel(logging.INFO)
 
-st.set_page_config(page_title="Echo Chat", page_icon="💬")
-st.title("Echo Chat (準備版)")
-st.caption("入力したテキストをそのまま返すシンプルなチャット。後でエージェントを組み込み予定。")
+st.set_page_config(page_title="FBA チャットアシスタント", page_icon="💬")
+st.title("FBA チャットアシスタント")
+st.caption("代謝モデルに質問し、ツール実行をストリーミングで確認できます。")
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
 if "agent" not in st.session_state:
-    st.session_state.agent = create_my_agent()
+    st.session_state.agent = create_fba_agent()
 
 # Display history
 for message in st.session_state.messages:
