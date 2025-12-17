@@ -9,7 +9,7 @@ from my_agents import create_my_agent
 # Load local environment variables for future OpenAI agent use
 load_dotenv()
 
-# Configure logging so my_agents logger outputs to console
+# Settings in config.toml doesn't work.
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
