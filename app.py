@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 from agents import Runner
 from openai.types.responses import ResponseTextDeltaEvent
 from fba_agents import create_fba_agent
+from entrez_agent import create_entrez_agent
 
 
 # Load local environment variables for future OpenAI agent use
@@ -24,7 +25,8 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
 
 if "agent" not in st.session_state:
-    st.session_state.agent = create_fba_agent()
+    # st.session_state.agent = create_fba_agent()
+    st.session_state.agent = create_entrez_agent()
 
 # Display history
 for message in st.session_state.messages:
@@ -44,9 +46,11 @@ if user_input := st.chat_input("メッセージを入力"):
         prompt = f"{history}\nuser: {user_input}" if history else user_input
         result = Runner.run_streamed(st.session_state.agent, input=prompt, max_turns=20)
         async for event in result.stream_events():
-            if event.type == "raw_response_event" and isinstance(event.data, ResponseTextDeltaEvent):
-                full_response += event.data.delta
-                yield event.data.delta
+            if event.type == "raw_response_event":
+                if isinstance(event.data, ResponseTextDeltaEvent):
+                    full_response += event.data.delta
+                    yield event.data.delta
+
         st.session_state.messages.append({"role": "assistant", "content": full_response})
 
     with st.chat_message("assistant"):

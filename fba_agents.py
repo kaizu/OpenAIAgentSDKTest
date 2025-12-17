@@ -1,18 +1,12 @@
 import logging
 import re
-from typing import TypedDict, Any
+from typing import TypedDict
 import uuid
-from agents import Agent, function_tool, RunContextWrapper
+from agents import Agent, function_tool
 import cobra
+from utils import my_custom_error_function
 
 logger = logging.getLogger(__name__)
-
-
-def my_custom_error_function(context: RunContextWrapper[Any], error: Exception) -> str:
-    """A custom function to provide a user-friendly error message."""
-    logger.info(f"my_custom_error_function called with error: {error}")
-    print(f"A tool call failed with the following error: {error}")
-    return f"An error occurred while running the tool. Please try again. Error: {str(error)}"
 
 session_id: str = ''
 model: cobra.core.model.Model | None = None
@@ -274,7 +268,7 @@ async def get_gene_associated_reaction_ids(gene_id: str) -> list[str]:
 def create_fba_agent():
     logger.info("create_fba_agent called")
     return Agent(
-            name="Assistant",
+            name="FBAAssistant",
             # model="gpt-4o-mini",
             model="gpt-5.2",
             tools=[
