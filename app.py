@@ -42,7 +42,7 @@ if user_input := st.chat_input("メッセージを入力"):
         full_response = ""
         history = "\n".join(f"{m['role']}: {m['content']}" for m in st.session_state.messages)
         prompt = f"{history}\nuser: {user_input}" if history else user_input
-        result = Runner.run_streamed(st.session_state.agent, input=prompt)
+        result = Runner.run_streamed(st.session_state.agent, input=prompt, max_turns=20)
         async for event in result.stream_events():
             if event.type == "raw_response_event" and isinstance(event.data, ResponseTextDeltaEvent):
                 full_response += event.data.delta

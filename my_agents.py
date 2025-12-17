@@ -1,6 +1,7 @@
 import logging
 import re
 from typing import TypedDict, Any
+import uuid
 from agents import Agent, function_tool, RunContextWrapper
 import cobra
 
@@ -13,18 +14,90 @@ def my_custom_error_function(context: RunContextWrapper[Any], error: Exception) 
     print(f"A tool call failed with the following error: {error}")
     return f"An error occurred while running the tool. Please try again. Error: {str(error)}"
 
+session_id: str = ''
 model: cobra.core.model.Model | None = None
 solution: cobra.core.solution.Solution | None = None
+knockout_reaction_ids: list[str] = []
+knockout_gene_ids: list[str] = []
 
 @function_tool
-async def prepare_model() -> bool:
-    """代謝モデルを準備し、計算結果を取得できる状態にします。準備に成功したかどうかを返します。"""
+async def prepare_model() -> str:
+    """代謝モデルを準備し、計算結果を取得できる状態にします。新しいセッションIDを返します。
+    この関数を呼び出すと代謝モデルに加えらえた変更はリセットされ、野生型細胞の代謝モデルの状態で初期化されます。
+    """
     logger.info("prepare_model called")
     global model
-    model = cobra.io.load_model('iJO1366')
+    global knockout_reaction_ids
+    global knockout_gene_ids
     global solution
+    global session_id
+    model = cobra.io.load_model('iJO1366')
+    knockout_reaction_ids = []
+    knockout_gene_ids = []
+    solution = model.optimize()
+    session_id = uuid.uuid4()
+    return session_id
+
+@function_tool
+async def get_current_session_id() -> str:
+    """今のセッションIDを返します。"""
+    logger.info(f"get_current_session_id called, session_id={session_id}")
+    return session_id
+
+@function_tool
+async def knockout_reaction(reaction_id: str) -> bool:
+    """現状の代謝モデルから反応をノックアウトした状態に更新します。また、流束を再計算します。セッションIDは更新しません。
+    モデルに含まれない反応IDや既にノックアウトされている反応IDを与えられた場合はFalseを返し、それ以外はTrueを返します。
+    
+    Args:
+        reaction_id: ノックアウトしたい反応のID。
+    """
+    logger.info(f"knockout_reaction called for reaction_id={reaction_id}")
+    global knockout_reaction_ids
+    global model
+    global solution
+    if reaction_id not in model.reactions:
+        return False
+    elif reaction_id in knockout_reaction_ids:
+        return False
+    knockout_reaction_ids.append(reaction_id)
+    reaction = model.reactions.get_by_id(reaction_id)
+    reaction.knock_out()
     solution = model.optimize()
     return True
+
+@function_tool
+async def get_knockout_reactions() -> list[str]:
+    """現在ノックアウトされている反応IDのリストを返します。"""
+    logger.info("get_knockout_reactions called")
+    return knockout_reaction_ids.copy()
+
+@function_tool
+async def knockout_gene(gene_id: str) -> bool:
+    """現状の代謝モデルから遺伝子をノックアウトした状態に更新します。また、流束を再計算します。セッションIDは更新しません。
+    モデルに含まれない遺伝子IDや既にノックアウトされている遺伝子IDを与えられた場合はFalseを返し、それ以外はTrueを返します。
+    """
+    logger.info(f"knockout_gene called for gene_id={gene_id}")
+    global knockout_gene_ids
+    global model
+    global solution
+    if model is None:
+        raise RuntimeError("モデルが準備できていません。")
+    if gene_id not in model.genes:
+        return False
+    elif gene_id in knockout_gene_ids:
+        return False
+    gene = model.genes.get_by_id(gene_id)
+    gene.knock_out()
+    knockout_gene_ids.append(gene_id)
+    solution = model.optimize()
+    return True
+
+@function_tool
+async def get_knockout_genes() -> list[str]:
+    """現在ノックアウトされている遺伝子IDのリストを返します。"""
+    logger.info("get_knockout_genes called")
+    return knockout_gene_ids.copy()
 
 @function_tool
 async def get_objective_value() -> float:
@@ -209,6 +282,11 @@ def create_my_agent():
                 prepare_model,
                 get_flux,
                 get_reaction_ids,
+                knockout_gene,
+                knockout_reaction,
+                get_current_session_id,
+                get_knockout_genes,
+                get_knockout_reactions,
                 get_metabolite_ids,
                 get_gene_ids,
                 get_reaction_info,
