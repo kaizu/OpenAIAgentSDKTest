@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+"""FBA Chat Streamlit app."""
+
 import logging
 import streamlit as st
 from dotenv import load_dotenv

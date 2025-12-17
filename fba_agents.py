@@ -1,3 +1,6 @@
+# -*- coding: utf-8 -*-
+"""FBA agent tools."""
+
 import logging
 import re
 from typing import TypedDict
