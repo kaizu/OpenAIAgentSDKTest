@@ -12,7 +12,8 @@ async def get_time() -> str:
 def whattime():
     agent = Agent(
         name="Assistant",
-        model="gpt-4o-mini",
+        # model="gpt-4o-mini",
+        model="gpt-5.2",
         tools=[get_time],
     )
     result = Runner.run_sync(agent, "いま何時？")

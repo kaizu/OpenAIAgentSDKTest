@@ -1,3 +1,4 @@
+import logging
 import streamlit as st
 from dotenv import load_dotenv
 from agents import Runner
@@ -6,6 +7,13 @@ from my_agents import create_my_agent
 
 # Load local environment variables for future OpenAI agent use
 load_dotenv()
+
+# Configure logging so my_agents logger outputs to console
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+)
+logging.getLogger("my_agents").setLevel(logging.INFO)
 
 def decide_response(user_text: str) -> str:
     """Return a response to the user with lightweight context."""
