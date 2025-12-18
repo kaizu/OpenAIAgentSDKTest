@@ -11,13 +11,12 @@ from Bio import Entrez, Medline
 logger = logging.getLogger(__name__)
 
 def _ensure_entrez_email() -> str:
-    email = os.getenv("ENTREZ_EMAIL")
-    if not email:
-        raise RuntimeError("ENTREZ_EMAIL が環境変数に設定されていません。")
-    Entrez.email = email
-    return email
-
-_ensure_entrez_email()
+    if not Entrez.email:
+        email = os.getenv("ENTREZ_EMAIL")
+        if not email:
+            raise RuntimeError("ENTREZ_EMAIL が環境変数に設定されていません。")
+        Entrez.email = email
+    return Entrez.email
 
 @function_tool(failure_error_function=my_custom_error_function)
 async def search_pubmed(term: str, retmax: int = 10) -> list[str]:
@@ -29,6 +28,7 @@ async def search_pubmed(term: str, retmax: int = 10) -> list[str]:
     """
     logger.info(f"search_pubmed called with term={term}, retmax={retmax}")
     assert 0 < retmax <= 100
+    _ensure_entrez_email()
     handle = Entrez.esearch(db="pubmed", term=term, retmax=f"{retmax:d}")
     record = Entrez.read(handle)
     return record["IdList"][: 10]
@@ -51,6 +51,7 @@ async def fetch_pubmed_document_summary(primary_ids: list[str]) -> list[PubMedDo
     """
     logger.info(f"fetch_pubmed_document_summary called for ids={primary_ids}")
     assert len(primary_ids) <= 100
+    _ensure_entrez_email()
     handle = Entrez.esummary(db="pubmed", id=primary_ids)
     record = Entrez.read(handle)
     result = [
@@ -67,24 +68,24 @@ async def fetch_pubmed_document_abstract(primary_ids: list[str]) -> list[str]:
     """
     logger.info(f"fetch_pubmed_document_abstract called for ids={primary_ids}")
     assert len(primary_ids) <= 100
+    _ensure_entrez_email()
     handle = Entrez.efetch(db="pubmed", id=primary_ids, rettype="medline", retmode="text")
     record = Medline.parse(handle)
     result = [r.get('AB', '') for r in record]
     return result
 
-def create_entrez_agent() -> Agent:
+def create_entrez_agent(model: str) -> Agent:
     logger.info("create_entrez_agent called")
     return Agent(
-            name="EntrezAssistant",
-            # model="gpt-4o-mini",
-            model="gpt-5.2",
+            name="Entrez assistant agent",
+            model=model,
             tools=[
                 search_pubmed,
                 fetch_pubmed_document_summary,
                 fetch_pubmed_document_abstract,
                 ],
             instructions=(
-                "あなたはNCBI Entrez検索を支援するアシスタントです。"
-                "ツールを使って検索し、得られた結果を要約して返してください。"
+                "あなたはPubMed上の文献の検索を支援するアシスタントです。"
+                "ツールを使って文献を検索し、得られた結果を要約して返してください。"
             ),
         )

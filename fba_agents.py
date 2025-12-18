@@ -268,12 +268,11 @@ async def get_gene_associated_reaction_ids(gene_id: str) -> list[str]:
     gene = model.genes.get_by_id(gene_id)
     return sorted([r.id for r in gene.reactions])
 
-def create_fba_agent():
+def create_fba_agent(model: str):
     logger.info("create_fba_agent called")
     return Agent(
-            name="FBAAssistant",
-            # model="gpt-4o-mini",
-            model="gpt-5.2",
+            name="FBA assistant agent",
+            model=model,
             tools=[
                 get_objective_value,
                 prepare_model,

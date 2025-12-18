@@ -2,9 +2,11 @@
 """FBA Chat Streamlit app."""
 
 import logging
+import os
 import streamlit as st
 from dotenv import load_dotenv
-from agents import Runner
+from agents import Runner, Agent
+from agents.tracing import set_tracing_export_api_key, set_tracing_disabled
 from openai.types.responses import ResponseTextDeltaEvent
 from fba_agents import create_fba_agent
 from entrez_agent import create_entrez_agent
@@ -19,6 +21,35 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
 )
 logging.getLogger("fba_agents").setLevel(logging.INFO)
+logging.getLogger("entrez_agents").setLevel(logging.INFO)
+
+logger = logging.getLogger(__name__)
+
+def create_agent():
+    set_tracing_disabled(disabled=False)
+    set_tracing_export_api_key(os.getenv('OPENAI_API_KEY'))
+    model = os.getenv("OPENAI_MODEL", os.getenv("OPENAI_DEFAULT_MODEL"))
+    fba_agent = create_fba_agent(model)
+    entrez_agent = create_entrez_agent(model)
+    orchestrator_agent = Agent(
+        name="Orchestrator agent",
+        instructions="""
+        あなたは代謝工学の研究者です。文献情報を検索し、その結果をもとに反応や遺伝子をノックアウトした
+        代謝モデルによる計算を行い、計算による予測を示します。
+        また、モデルの情報を説明したり、計算による予測結果から仮説や次の計算条件の示唆を行います。
+        """,
+        tools=[
+            fba_agent.as_tool(
+                tool_name="simulate_with_fba",
+                tool_description="代謝モデルの情報をユーザーにしまします。またそのモデルを使って反応や遺伝子欠損時の代謝状態の予測を行います。",
+            ),
+            entrez_agent.as_tool(
+                tool_name="search_articles_with_pubmed",
+                tool_description="PubMed検索によって文献を探索し、その要約を返します。",
+            ),
+        ],
+    )
+    return orchestrator_agent
 
 st.set_page_config(page_title="FBA チャットアシスタント", page_icon="💬")
 st.title("FBA チャットアシスタント")
@@ -29,7 +60,8 @@ if "messages" not in st.session_state:
 
 if "agent" not in st.session_state:
     # st.session_state.agent = create_fba_agent()
-    st.session_state.agent = create_entrez_agent()
+    # st.session_state.agent = create_entrez_agent()
+    st.session_state.agent = create_agent()
 
 # Display history
 for message in st.session_state.messages:
