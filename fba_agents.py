@@ -8,6 +8,7 @@ import uuid
 from agents import Agent, function_tool
 import cobra
 from utils import my_custom_error_function
+from entrez_agent import create_entrez_agent
 
 logger = logging.getLogger(__name__)
 
@@ -270,6 +271,7 @@ async def get_gene_associated_reaction_ids(gene_id: str) -> list[str]:
 
 def create_fba_agent(model: str):
     logger.info("create_fba_agent called")
+    entrez_agent = create_entrez_agent(model)
     return Agent(
             name="FBA assistant agent",
             model=model,
@@ -291,10 +293,19 @@ def create_fba_agent(model: str):
                 get_metabolite_associated_reaction_ids,
                 get_reaction_associated_gene_ids,
                 get_gene_associated_reaction_ids,
+                entrez_agent.as_tool(
+                    tool_name="search_articles_with_pubmed",
+                    tool_description="PubMed検索によって文献を探索し、その要約を返します。",
+                    ),
                 ],
             instructions="""
-            あなたは代謝シミュレーションの専門家です。ステップ毎に行ったことと結果を簡潔に説明して下さい。
+            あなたは代謝シミュレーションの専門家です。独自の大腸菌の全代謝モデルについて情報を返したり、
+            その独自モデルを使ったシミュレーションによって予測結果を示したりします。
+            ステップ毎に行ったことと結果を簡潔に説明して下さい。
             モデルとその結果に関する質問に対して、ツールを使って取得した情報に忠実に答えること。
             モデルから得た文字列情報については'\text'などの変更を加えずに可能な限りそのまま返すこと。
+            反応や代謝物、遺伝子についてはまず自分の有するモデルに関することとして捉えて考えて対応し、
+            そのモデル中に情報が見当たらない場合にのみ一般的な情報として捉えて概要を述べて下さい。
+            特に断りが無い限りは生物種は大腸菌です。
             """,
         )

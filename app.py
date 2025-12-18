@@ -30,26 +30,28 @@ def create_agent():
     set_tracing_export_api_key(os.getenv('OPENAI_API_KEY'))
     model = os.getenv("OPENAI_MODEL", os.getenv("OPENAI_DEFAULT_MODEL"))
     fba_agent = create_fba_agent(model)
-    entrez_agent = create_entrez_agent(model)
-    orchestrator_agent = Agent(
-        name="Orchestrator agent",
-        instructions="""
-        あなたは代謝工学の研究者です。文献情報を検索し、その結果をもとに反応や遺伝子をノックアウトした
-        代謝モデルによる計算を行い、計算による予測を示します。
-        また、モデルの情報を説明したり、計算による予測結果から仮説や次の計算条件の示唆を行います。
-        """,
-        tools=[
-            fba_agent.as_tool(
-                tool_name="simulate_with_fba",
-                tool_description="代謝モデルの情報をユーザーにしまします。またそのモデルを使って反応や遺伝子欠損時の代謝状態の予測を行います。",
-            ),
-            entrez_agent.as_tool(
-                tool_name="search_articles_with_pubmed",
-                tool_description="PubMed検索によって文献を探索し、その要約を返します。",
-            ),
-        ],
-    )
-    return orchestrator_agent
+    # entrez_agent = create_entrez_agent(model)
+    # orchestrator_agent = Agent(
+    #     name="Orchestrator agent",
+    #     instructions="""
+    #     あなたは代謝工学の研究者です。文献情報を検索し、その結果をもとに反応や遺伝子をノックアウトした
+    #     代謝モデルによる計算を行い、計算による予測を示します。
+    #     また、モデルの情報を説明したり、計算による予測結果から仮説や次の計算条件の示唆を行います。
+    #     """,
+    #     tools=[
+    #         fba_agent.as_tool(
+    #             tool_name="simulate_with_fba",
+    #             tool_description="代謝モデルの情報をユーザーにしまします。またそのモデルを使って反応や遺伝子欠損時の代謝状態の予測を行います。",
+    #         ),
+    #         entrez_agent.as_tool(
+    #             tool_name="search_articles_with_pubmed",
+    #             tool_description="PubMed検索によって文献を探索し、その要約を返します。",
+    #         ),
+    #     ],
+    # )
+    # return orchestrator_agent
+    # return Agent(name="Triage agent", handoffs=[fba_agent, entrez_agent])
+    return fba_agent
 
 st.set_page_config(page_title="FBA チャットアシスタント", page_icon="💬")
 st.title("FBA チャットアシスタント")
@@ -79,7 +81,7 @@ if user_input := st.chat_input("メッセージを入力"):
         full_response = ""
         history = "\n".join(f"{m['role']}: {m['content']}" for m in st.session_state.messages)
         prompt = f"{history}\nuser: {user_input}" if history else user_input
-        result = Runner.run_streamed(st.session_state.agent, input=prompt, max_turns=20)
+        result = Runner.run_streamed(st.session_state.agent, input=prompt, max_turns=30)
         async for event in result.stream_events():
             if event.type == "raw_response_event":
                 if isinstance(event.data, ResponseTextDeltaEvent):
