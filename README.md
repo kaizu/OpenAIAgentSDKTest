@@ -15,6 +15,7 @@
   ```
   OPENAI_API_KEY=sk-...
   ENTREZ_EMAIL=you@example.com
+  OPENAI_MODEL=gpt-5.2
   ```
 
 - インストール後、Streamlitを起動:
